@@ -1,0 +1,49 @@
+name: Sync SCLTK-Website
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 16 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: Checkout SCLTK-Website
+        uses: actions/checkout@v7
+        with:
+          repository: MaxLHy0424/SCLTK-Website
+          # 如需私有仓库，请取消注释并配置 PAT
+          # token: ${{ secrets.PAT_TOKEN }}
+          path: SCLTK-Website-Mirror
+          # ref: main   # 如需指定分支可取消注释
+
+      - name: Copy to 'public' folder
+        run: |
+          mkdir -p public
+          rm -rf public/*
+          cp -r SCLTK-Website-Mirror/. public/
+          cp -r static/. public/
+          rm -rf SCLTK-Website-Mirror
+          rm -rf public/.git
+          rm -rf public/.gitkeep
+          rm -rf public/.gitignore
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/
+          git diff --staged --quiet || git commit -m "Sync SCLTK-Website $(date +'%Y-%m-%d %H:%M:%S')"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push

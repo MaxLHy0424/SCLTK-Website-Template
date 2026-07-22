@@ -1,0 +1,49 @@
+name: Deploy to PinMe
+on:
+#   push:
+#     branches:
+#       - main
+#       - master
+
+#   workflow_run:
+#     workflows: ["Sync SCLTK-Website"]
+#     types:
+#       - completed
+
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Custom domain name (optional)'
+        required: false
+        type: string
+
+env:
+  default_domain: ${{ github.repository }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install PinMe CLI
+        run: npm install -g pinme
+
+      - name: Deploy to PinMe
+        env:
+          PINME_APPKEY: ${{ secrets.PINME_APPKEY }}
+        run: |
+          pinme set-appkey "$PINME_APPKEY"
+          if [ -n "${{ github.event.inputs.domain }}" ]; then
+            DOMAIN="${{ github.event.inputs.domain }}"
+          else
+            DOMAIN=$(echo "$default_domain" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
+          fi
+          pinme upload "public" --domain "$DOMAIN"
